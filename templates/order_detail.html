@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Order #{{ order.id }}</h2>
+<div class="grid two">
+  <div class="card">
+    <p><strong>Customer:</strong> {{ order.customer_name }}</p>
+    {% if order.customer_address %}
+    <p><strong>Address:</strong> {{ order.customer_address }}</p>
+    {% endif %}
+    {% if order.company_name %}
+    <p><strong>Company:</strong> {{ order.company_name }}</p>
+    {% endif %}
+    {% if order.company_location %}
+    <p><strong>Location:</strong> {{ order.company_location }}</p>
+    {% endif %}
+    <p><strong>Status:</strong> {{ order.status }}</p>
+    <p><strong>Created:</strong> {% if order.created_at %}{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}{% else %}—{% endif %}</p>
+    {% if order.status == 'PENDING' %}
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px">
+        <a class="button" href="{{ url_for('order_edit', order_id=order.id) }}">Edit Order</a>
+        <form method="post" action="{{ url_for('order_delete', order_id=order.id) }}" onsubmit="return confirm('Delete this order?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button class="button ghost" type="submit">Delete Order</button>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+  <div class="card">
+    <h3>Update Status</h3>
+    <form method="post" action="{{ url_for('order_status_update', order_id=order.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <select name="status">
+        {% set options = ['PENDING','PROCESSING','OUT_FOR_DELIVERY','DELIVERED','COMPLETED','CANCELLED'] %}
+        {% for s in options %}
+          <option value="{{ s }}" {% if order.status==s %}selected{% endif %}>{{ s.replace('_',' ') }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Save</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Items</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Qty Ordered</th>
+        <th>Unit</th>
+        <th>Unit Price</th>
+        <th>Tax %</th>
+        <th>Packets</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for li in order.items %}
+      <tr>
+        <td>{{ li.item_name }}</td>
+        <td>{{ li.qty_ordered }}</td>
+        <td>{{ li.unit }}</td>
+        <td>{{ li.unit_price|currency }}</td>
+        <td>{{ li.tax_rate }}%</td>
+        <td>
+          {% if li.packets_count %}
+            {{ li.packets_count }} x
+            {% if li.packet_weight %}
+              {{ '%.3f'|format(li.packet_weight|float) }} kg/pack
+            {% endif %}
+          {% else %}
+            —
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if order.delivery and order.delivery.overall_mismatch_reason %}
+  <div class="card">
+    <h3>Overall mismatch reason</h3>
+    <p>{{ order.delivery.overall_mismatch_reason }}</p>
+  </div>
+{% endif %}
+
+{% if order.status != 'DELIVERED' %}
+  <p><a class="button" href="{{ url_for('delivery_new', order_id=order.id) }}">Record Delivery</a></p>
+{% else %}
+  <div class="card">
+    <h3>Delivery Summary ({{ order.delivery.delivery_date }})</h3>
+    <ul>
+      <li>Total Accepted Qty: <strong>{{ order.delivery.total_accepted_qty }}</strong></li>
+      <li>Total Rejected Qty: <strong>{{ order.delivery.total_rejected_qty }}</strong></li>
+    </ul>
+    <p><a class="button" href="{{ url_for('invoice', order_id=order.id) }}">View Invoice</a></p>
+  </div>
+{% endif %}
+{% endblock %}

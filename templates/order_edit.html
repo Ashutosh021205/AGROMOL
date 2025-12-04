@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Edit Order #{{ order.id }}</h2>
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+  <div class="card">
+    <div class="form-grid">
+      <div class="field third">
+        <label>Customer Name</label>
+        <input type="text" name="customer_name" value="{{ order.customer_name }}" required />
+      </div>
+      <div class="field two-thirds">
+        <label>Company Name</label>
+        <input type="text" name="company_name" value="{{ order.company_name or '' }}" />
+      </div>
+      <div class="field third">
+        <label>Company Location</label>
+        <input type="text" name="company_location" value="{{ order.company_location or '' }}" />
+      </div>
+      <div class="field two-thirds">
+        <label>Customer GSTIN</label>
+        <input type="text" name="customer_gstin" value="{{ order.customer_gstin or '' }}" />
+      </div>
+      <div class="field">
+        <label>Customer Address</label>
+        <textarea name="customer_address" rows="2">{{ order.customer_address or '' }}</textarea>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="field half">
+        <label>Dispatch Location</label>
+        <select name="dispatch_location_id">
+          <option value="">Select a location (Optional)</option>
+          {% for loc in locations %}
+          <option value="{{ loc.id }}" {% if order.dispatch_location_id == loc.id %}selected{% endif %}>{{ loc.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Items</h3>
+    <p class="small">Replace the lines below. Enter either total quantity or packets with per-packet weight.</p>
+    <table id="lines">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>HSN/SAC</th>
+          <th>Total Qty</th>
+          <th>Packets</th>
+          <th>Wt/Packet</th>
+          <th>Location</th>
+          <th>Unit (g/kg)</th>
+          <th>Unit Price</th>
+          <th>GST Rate</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for oi in order.items %}
+        <tr>
+          <td>
+            <input type="text" name="item_name[]" list="items_list" value="{{ oi.item_name }}" placeholder="Type item name" />
+            <input type="hidden" name="item_id[]" value="{{ oi.item_id }}" />
+            <datalist id="items_list">
+              {% for i in items %}
+              <option value="{{ i.name }}"></option>
+              {% endfor %}
+            </datalist>
+          </td>
+          <td><input type="text" name="hsn_sac[]" value="{{ oi.hsn_sac or '' }}" placeholder="HSN/SAC" class="small-input" /></td>
+          <td><input type="number" name="qty[]" step="0.001" value="{{ oi.qty_ordered }}" /></td>
+          <td><input type="number" name="packets_count[]" step="1" value="{{ oi.packets_count or 0 }}" /></td>
+          <td><input type="number" name="packet_weight[]" step="0.001" value="{{ oi.packet_weight or 0.500 }}" /></td>
+          <td>
+            <select name="location_id[]">
+              {% for loc in locations %}
+              <option value="{{ loc.id }}" {% if oi.location_id == loc.id %}selected{% endif %}>{{ loc.name }}</option>
+              {% endfor %}
+            </select>
+          </td>
+          <td>
+            <select name="packet_unit[]">
+              <option value="kg" {% if oi.packet_unit == 'kg' %}selected{% endif %}>kg</option>
+              <option value="g" {% if oi.packet_unit == 'g' %}selected{% endif %}>g</option>
+            </select>
+          </td>
+          <td><input type="number" name="unit_price[]" step="0.01" value="{{ oi.unit_price }}" /></td>
+          <td><input type="number" name="tax_rate[]" step="0.01" value="{{ oi.tax_rate }}" class="small-input" /></td>
+          <td><button type="button" class="remove">✕</button></td>
+        </tr>
+        {% endfor %}
+        <!-- Template for new rows -->
+        <tr id="empty-row-template" style="display:none;">
+          <td>
+            <input type="text" name="item_name[]" list="items_list" placeholder="Type item name" />
+            <input type="hidden" name="item_id[]" />
+          </td>
+          <td><input type="text" name="hsn_sac[]" placeholder="HSN/SAC" class="small-input" /></td>
+          <td><input type="number" name="qty[]" step="0.001" value="0" /></td>
+          <td><input type="number" name="packets_count[]" step="1" value="0" /></td>
+          <td><input type="number" name="packet_weight[]" step="0.001" value="0.500" /></td>
+          <td>
+            <select name="location_id[]">
+              {% for loc in locations %}
+              <option value="{{ loc.id }}">{{ loc.name }}</option>
+              {% endfor %}
+            </select>
+          </td>
+          <td>
+            <select name="packet_unit[]">
+              <option value="kg">kg</option>
+              <option value="g">g</option>
+            </select>
+          </td>
+          <td><input type="number" name="unit_price[]" step="0.01" /></td>
+          <td><input type="number" name="tax_rate[]" step="0.01" class="small-input" /></td>
+          <td><button type="button" class="remove">✕</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:8px">
+      <button type="button" id="addLine">Add Line</button>
+    </div>
+  </div>
+  <button type="submit">Save Order</button>
+</form>
+
+<script>
+(function(){
+  const table = document.getElementById('lines').getElementsByTagName('tbody')[0];
+  const addBtn = document.getElementById('addLine');
+  const emptyRowTemplate = document.getElementById('empty-row-template');
+  const META = {
+  {% for i in items %}
+    "{{ i.name|e }}": {"id": {{ i.id }}, "price": {{ i.unit_price|float }}, "tax": {{ i.tax_rate|float }}, "hsn_sac": "{{ i.hsn_sac or '' }}" }{% if not loop.last %},{% endif %}
+  {% endfor %}
+  };
+  const LOCATIONS = [
+  {% for loc in locations %}
+    {"id": {{ loc.id }}, "name": "{{ loc.name|e }}" }{% if not loop.last %},{% endif %}
+  {% endfor %}
+  ];
+
+  // Function to initialize new rows
+  function initializeRow(tr) {
+    const nameInput = tr.querySelector('input[name="item_name[]"]');
+    const hiddenId = tr.querySelector('input[name="item_id[]"]');
+    const priceInput = tr.querySelector('input[name="unit_price[]"]');
+    const taxInput = tr.querySelector('input[name="tax_rate[]"]');
+    const hsnSacInput = tr.querySelector('input[name="hsn_sac[]"]');
+    const locationSelect = tr.querySelector('select[name="location_id[]"]');
+
+    nameInput.addEventListener('change', () => {
+      const selectedItemName = nameInput.value;
+      const itemMeta = META[selectedItemName];
+      if (itemMeta) {
+        hiddenId.value = itemMeta.id;
+        if (!priceInput.value) priceInput.value = itemMeta.price;
+        if (!taxInput.value) taxInput.value = itemMeta.tax;
+        if (!hsnSacInput.value) hsnSacInput.value = itemMeta.hsn_sac;
+      } else {
+        hiddenId.value = '';
+      }
+    });
+
+    tr.querySelector('.remove').addEventListener('click', () => {
+      if (table.rows.length > 2) { // Keep at least one editable row (the template)
+        tr.remove();
+      }
+    });
+  }
+
+  // Initialize existing rows
+  Array.from(table.rows).forEach(row => {
+    if (row.id !== 'empty-row-template') {
+      initializeRow(row);
+    }
+  });
+
+  // Add new row button
+  addBtn.addEventListener('click', () => {
+    const newRow = emptyRowTemplate.cloneNode(true);
+    newRow.removeAttribute('id');
+    newRow.style.display = '';
+
+    // Clear values for new row
+    newRow.querySelector('input[name="item_name[]"]').value = '';
+    newRow.querySelector('input[name="item_id[]"]').value = '';
+    newRow.querySelector('input[name="hsn_sac[]"]').value = '';
+    newRow.querySelector('input[name="qty[]"]').value = '0';
+    newRow.querySelector('input[name="packets_count[]"]').value = '0';
+    newRow.querySelector('input[name="packet_weight[]"]').value = '0.500';
+    newRow.querySelector('input[name="unit_price[]"]').value = '';
+    newRow.querySelector('input[name="tax_rate[]"]').value = '';
+    newRow.querySelector('select[name="location_id[]"]').value = LOCATIONS[0].id;
+    newRow.querySelector('select[name="packet_unit[]"]').value = 'kg';
+
+    table.appendChild(newRow);
+    initializeRow(newRow);
+  });
+
+  // Initial setup for the first row if it's not the template
+  if (table.rows.length === 1 && table.rows[0].id !== 'empty-row-template') {
+    initializeRow(table.rows[0]);
+  }
+})();
+</script>
+{% endblock %}
+
+
+
+
+
+

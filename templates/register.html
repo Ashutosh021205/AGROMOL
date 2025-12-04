@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="login-wrap">
+  <div class="card">
+    <h2>Register</h2>
+    <p class="small">Create a new account to access the system.</p>
+    
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      
+      <label>Username</label>
+      <input type="text" name="username" placeholder="Enter username" required />
+      
+      <label>Email</label>
+      <input type="email" name="email" placeholder="Enter email address" required />
+      
+      <label>Password</label>
+      <input type="password" name="password" placeholder="Enter password" required />
+      
+      <label>Confirm Password</label>
+      <input type="password" name="confirm_password" placeholder="Confirm password" required />
+      
+      <div class="actions-row">
+        <button type="submit">Register</button>
+        <a class="button ghost" href="{{ url_for('login') }}">Back to Login</a>
+      </div>
+    </form>
+    
+    <div style="margin-top: 20px; padding: 10px; background: #fff3cd; border-radius: 8px;">
+      <p class="small"><strong>Note:</strong> New accounts are created with viewer privileges. Contact an administrator to upgrade your access level.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
+
+
+
+
+

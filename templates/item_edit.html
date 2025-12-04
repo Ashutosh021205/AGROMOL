@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Edit Item</h2>
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+  <div class="card">
+    <div class="form-grid">
+      <div class="field half">
+        <label>Name</label>
+        <input type="text" name="name" value="{{ item.name }}" required />
+      </div>
+      <div class="field third">
+        <label>Category</label>
+        <select id="category" name="category" required>
+          <option value="fresh" {% if item.category == "fresh" %}selected{% endif %}>Fresh</option>
+          <option value="processed" {% if item.category == "processed" %}selected{% endif %}>Processed</option>
+          <option value="frozen" {% if item.category == "frozen" %}selected{% endif %}>Frozen</option>
+        </select>
+      </div>
+      <div class="field third">
+        <label for="hsn_sac">HSN/SAC (Optional)</label>
+        <input type="text" id="hsn_sac" name="hsn_sac" value="{{ item.hsn_sac or '' }}" placeholder="e.g., 20059900" class="small-input" />
+      </div>
+      <div class="field third">
+        <label>Unit</label>
+        <select name="unit">
+          {% for u in ['kg','pcs'] %}
+            <option value="{{ u }}" {% if item.unit==u %}selected{% endif %}>{{ u == 'pcs' and 'pieces' or u }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field third">
+        <label>Quantity ({{ item.unit }})</label>
+        <input type="number" step="0.001" name="quantity" value="{{ item.quantity }}" />
+      </div>
+      <div class="field third">
+        <label>Location for Quantity Update</label>
+        <select name="stock_update_location_id">
+          {% for loc in locations %}
+          <option value="{{ loc.id }}" {% if loop.first %}selected{% endif %}>{{ loc.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field third">
+        <label>Unit Price</label>
+        <input type="number" step="0.01" name="unit_price" value="{{ item.unit_price }}" />
+      </div>
+      <div class="field third">
+        <label>GST Rate (%)</label>
+        <input type="number" step="0.01" name="tax_rate" value="{{ item.tax_rate }}" class="small-input" />
+      </div>
+    </div>
+    <div style="margin-top:8px">
+      <button type="submit">Save</button>
+      <a class="button ghost" href="{{ url_for('items_view') }}">Cancel</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

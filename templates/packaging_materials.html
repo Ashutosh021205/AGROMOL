@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Manage Packaging Materials</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <script src="{{ url_for('static', filename='htmx.min.js') }}"></script>
+</head>
+<body>
+<header>
+  <div class="container nav">
+    <a href="{{ url_for('dashboard') }}" class="brand">
+      {% if brand_logo_url %}
+      <img src="{{ brand_logo_url }}" alt="{{ brand_name or 'Agromol' }}" />
+      {% else %}
+      {{ brand_name or 'Agromol' }}
+      {% endif %}
+    </a>
+    <nav>
+      <a href="{{ url_for('dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('items_view') }}">Items</a>
+      <a href="{{ url_for('stock_update') }}">Stock</a>
+      <a href="{{ url_for('orders_list') }}">Orders</a>
+      <a href="{{ url_for('manage_locations') }}">Locations</a>
+      <a href="{{ url_for('manage_packaging_materials') }}">Packaging</a>
+      <form method="post" action="{{ url_for('logout') }}" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit" class="logout-btn">Logout</button>
+      </form>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul class="flashes">
+      {% for category, message in messages %}
+        <li class="flash {{ category }}">{{ message }}</li>
+      {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  <h2>Manage Packaging Materials</h2>
+
+  <div class="card">
+    <h3>Add New Packaging Material</h3>
+    <form method="post" action="{{ url_for('manage_packaging_materials') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <label>Material Name
+        <input type="text" name="name" required />
+      </label>
+      <label>Unit
+        <select name="unit">
+          <option value="pcs">pieces</option>
+          <option value="kg">kg</option>
+          <option value="m">meter</option>
+        </select>
+      </label>
+      <label>Initial Stock
+        <input type="number" step="0.001" name="initial_stock" value="0" />
+      </label>
+      <button type="submit">Add Material</button>
+    </form>
+  </div>
+
+  <div class="actions-row" style="justify-content:flex-start; margin-bottom: 15px;">
+    <a class="button" href="{{ url_for('packaging_stock_update') }}">Update Packaging Stock</a>
+  </div>
+
+  <h3>Existing Packaging Materials</h3>
+  {% if packaging_materials %}
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Unit</th>
+          <th>Current Stock</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for material in packaging_materials %}
+        <tr>
+          <td>{{ material.id }}</td>
+          <td>{{ material.name }}</td>
+          <td>{{ material.unit }}</td>
+          <td>{{ material.current_stock }}</td>
+          <td>{{ 'Active' if material.active else 'Inactive' }}</td>
+          <td>
+            <div class="table-actions">
+              <a class="button small secondary" href="{{ url_for('edit_packaging_material', material_id=material.id) }}">Edit</a>
+              <form method="post" action="{{ url_for('delete_packaging_material', material_id=material.id) }}" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button class="button small danger" onclick="return confirm('Delete this packaging material and all its stock entries?')">Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p>No packaging materials added yet.</p>
+  {% endif %}
+</main>
+
+<footer>
+  <div class="container small">&copy; {{ brand_name }}</div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="login-wrap">
+  <div class="card">
+    <h2>Login</h2>
+    <p class="small">Enter your credentials to access the system.</p>
+    
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      
+      <label>Username</label>
+      <input type="text" name="username" placeholder="Enter username" required />
+      
+      <label>Password</label>
+      <input type="password" name="password" placeholder="Enter password" required />
+      
+      <div class="actions-row">
+        <button type="submit">Login</button>
+        <a class="button ghost" href="{{ url_for('register') }}">Register</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+

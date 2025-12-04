@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ brand_name }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <script>
+    (function(){
+      try{
+        var key='theme';
+        var stored=localStorage.getItem(key);
+        var prefers=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';
+        var theme=stored||prefers;
+        document.documentElement.setAttribute('data-theme', theme);
+      }catch(e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+</head>
+<body>
+<header>
+  <div class="container nav">
+    <h1 class="brand">
+      <a href="{{ url_for('dashboard') }}" aria-label="{{ brand_name }}">
+        <img src="{{ brand_logo_url }}" alt="{{ brand_name }}" onerror="this.replaceWith(document.createTextNode('{{ brand_name }}'))" />
+      </a>
+    </h1>
+    <nav>
+      {% if current_user.is_authenticated %}
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('items_view') }}">Items</a>
+        <a href="{{ url_for('stock_update') }}">Stock</a>
+        <a href="{{ url_for('orders_list') }}">Orders</a>
+        <a href="{{ url_for('manage_locations') }}">Locations</a>
+        {% if current_user.is_admin() %}<a href="{{ url_for('users_list') }}">Users</a>{% endif %}
+        <button id="themeToggle" class="button small ghost" type="button" title="Toggle theme">🌙</button>
+        <div style="display: inline-flex; align-items: center; margin-left: 12px; gap:8px; flex-wrap: wrap;">
+          <span class="small">{{ current_user.username }} ({{ current_user.role.title() }})</span>
+          <form method="post" action="{{ url_for('logout') }}" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="logout-btn" title="Logout">⎋ Logout</button>
+          </form>
+        </div>
+      {% else %}
+        <a href="{{ url_for('login') }}">Login</a>
+        <a href="{{ url_for('register') }}">Register</a>
+        <button id="themeToggle" class="button small ghost" type="button" title="Toggle theme">🌙</button>
+      {% endif %}
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul class="flashes">
+        {% for category, message in messages %}
+          <li class="flash {{ category }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</main>
+
+<footer>
+  <div class="container small">&copy; {{ brand_name }}</div>
+</footer>
+
+<script>
+  (function(){
+    var btn=document.getElementById('themeToggle');
+    if(!btn) return;
+    function current(){ return document.documentElement.getAttribute('data-theme')||'light'; }
+    function setTheme(t){ document.documentElement.setAttribute('data-theme', t); try{ localStorage.setItem('theme', t);}catch(e){} }
+    btn.addEventListener('click', function(){ setTheme(current()==='dark'?'light':'dark'); });
+  })();
+</script>
+</body>
+</html>

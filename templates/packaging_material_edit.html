@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Edit Packaging Material</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <script src="{{ url_for('static', filename='htmx.min.js') }}"></script>
+</head>
+<body>
+<header>
+  <div class="container nav">
+    <a href="{{ url_for('dashboard') }}" class="brand">
+      {% if brand_logo_url %}
+      <img src="{{ brand_logo_url }}" alt="{{ brand_name or 'Agromol' }}" />
+      {% else %}
+      {{ brand_name or 'Agromol' }}
+      {% endif %}
+    </a>
+    <nav>
+      <a href="{{ url_for('dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('items_view') }}">Items</a>
+      <a href="{{ url_for('stock_update') }}">Stock</a>
+      <a href="{{ url_for('orders_list') }}">Orders</a>
+      <a href="{{ url_for('manage_locations') }}">Locations</a>
+      <a href="{{ url_for('manage_packaging_materials') }}">Packaging</a>
+      <form method="post" action="{{ url_for('logout') }}" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit" class="logout-btn">Logout</button>
+      </form>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul class="flashes">
+      {% for category, message in messages %}
+        <li class="flash {{ category }}">{{ message }}</li>
+      {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  <h2>Edit Packaging Material: {{ material.name }}</h2>
+
+  <div class="card">
+    <form method="post" action="{{ url_for('edit_packaging_material', material_id=material.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <label>Material Name
+        <input type="text" name="name" value="{{ material.name }}" required />
+      </label>
+      <label>Unit
+        <select name="unit">
+          <option value="pcs" {% if material.unit == 'pcs' %}selected{% endif %}>pieces</option>
+          <option value="kg" {% if material.unit == 'kg' %}selected{% endif %}>kg</option>
+          <option value="m" {% if material.unit == 'm' %}selected{% endif %}>meter</option>
+        </select>
+      </label>
+      <label>
+        <input type="checkbox" name="active" {% if material.active %}checked{% endif %} /> Active
+      </label>
+      <label>Current Stock: {{ material.current_stock }} {{ material.unit }}</label>
+      <label>Stock Change (+/-)
+        <input type="number" step="0.001" name="stock_change" value="0" />
+      </label>
+      <label>Note (for stock change)
+        <input type="text" name="note" />
+      </label>
+      <button type="submit">Update Material</button>
+      <a class="button ghost" href="{{ url_for('manage_packaging_materials') }}">Cancel</a>
+    </form>
+  </div>
+</main>
+
+<footer>
+  <div class="container small">&copy; {{ brand_name }}</div>
+</footer>
+
+</body>
+</html>
+
+
+
+
+
+
+

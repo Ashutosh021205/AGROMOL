@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Update Packaging Material Stock</h2>
+
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+  <div class="card">
+    <div class="form-grid">
+      <div class="field half">
+        <label>Entry Date</label>
+        <input type="date" name="entry_date" value="{{ today|date_input }}" required />
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Packaging Materials</h3>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Material</th>
+            <th>Unit</th>
+            <th>Current Stock</th>
+            <th>Change Quantity</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for material in packaging_materials %}
+          <tr>
+            <td>{{ material.name }}</td>
+            <td>{{ material.unit }}</td>
+            <td>{{ material.current_stock }}</td>
+            <td>
+              <input type="number" name="delta_{{ material.id }}" step="0.001" value="0" />
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="actions-row">
+    <button type="submit">Update Stock</button>
+    <a class="button ghost" href="{{ url_for('manage_packaging_materials') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}
+
+
+
+
+
+
+

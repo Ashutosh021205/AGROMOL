@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="login-wrap">
+  <div class="card">
+    <h2>Verify OTP</h2>
+    <p>An OTP has been sent to <strong>{{ user.email }}</strong></p>
+    <p class="small">Please check your email and enter the 6-digit code below.</p>
+    
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <label>OTP Code</label>
+      <input type="text" name="otp" placeholder="Enter 6-digit OTP" maxlength="6" required />
+      
+      <div class="actions-row">
+        <button type="submit">Verify OTP</button>
+        <a class="button ghost" href="{{ url_for('login') }}">Back to Login</a>
+      </div>
+    </form>
+    
+    <div style="margin-top: 20px; padding: 10px; background: #f0f8ff; border-radius: 8px;">
+      <p class="small"><strong>Note:</strong> If you don't receive the email, check your spam folder or contact your administrator.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// Auto-focus on OTP input
+document.querySelector('input[name="otp"]').focus();
+
+// Format OTP input (numbers only)
+document.querySelector('input[name="otp"]').addEventListener('input', function(e) {
+  e.target.value = e.target.value.replace(/[^0-9]/g, '');
+});
+</script>
+{% endblock %}
+
+
+
+
+
+
+

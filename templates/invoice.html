@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Tax Invoice</h2>
+<div class="grid two">
+  <div class="card">
+    <h3>{{ seller.name }}</h3>
+    {% if seller.address %}<p>{{ seller.address }}</p>{% endif %}
+    {% if seller.state %}<p>{{ seller.state }}</p>{% endif %}
+    {% if seller.gstin %}<p><strong>GSTIN:</strong> {{ seller.gstin }}</p>{% endif %}
+    <p>Date: {{ order.invoice_date or today }}</p>
+    <p>Invoice No: <strong>{{ order.invoice_number }}</strong></p>
+    <p>For Order #{{ order.id }}</p>
+  </div>
+  <div class="card">
+    <h3>Bill To</h3>
+    <p><strong>{{ order.customer_name }}</strong></p>
+    {% if order.customer_address %}<p>{{ order.customer_address }}</p>{% endif %}
+    {% if order.company_name %}<p>Company: {{ order.company_name }}</p>{% endif %}
+    {% if order.company_location %}<p>Location: {{ order.company_location }}</p>{% endif %}
+    {% if order.customer_gstin %}<p><strong>GSTIN:</strong> {{ order.customer_gstin }}</p>{% endif %}
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Item</th>
+      <th>HSN/SAC</th>
+      <th>Qty</th>
+      <th>Unit</th>
+      <th>Unit Price</th>
+      <th>Amount</th>
+      <th>GST Rate</th>
+      <th>Tax Amt</th>
+      <th>Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for li in lines %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td>{{ li.item_name }}</td>
+      <td>{{ li.item_hsn }}</td>
+      <td>{{ li.qty }}</td>
+      <td>{{ li.unit }}</td>
+      <td>{{ li.unit_price|currency }}</td>
+      <td>{{ li.amount|currency }}</td>
+      <td>{{ li.tax_rate }}%</td>
+      <td>{{ li.tax_amount|currency }}</td>
+      <td>{{ li.total|currency }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <th colspan="5" class="right">Subtotal</th>
+      <th>{{ subtotal|currency }}</th>
+      <th class="right">Tax</th>
+      <th>{{ total_tax|currency }}</th>
+      <th>{{ (subtotal + total_tax)|currency }}</th>
+    </tr>
+    <tr>
+      <th colspan="8" class="right">Grand Total</th>
+      <th>{{ grand_total|currency }}</th>
+    </tr>
+  </tfoot>
+</table>
+
+<p><button onclick="window.print()">Print</button></p>
+{% endblock %}

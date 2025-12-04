@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Items</h2>
+<div class="grid two">
+  {% if current_user.is_admin() %}
+  <div class="card" id="add-item">
+    <h3>Add Item</h3>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <div class="form-grid">
+        <div class="field half">
+          <label>Name</label>
+          <input type="text" name="name" placeholder="e.g., Tomato" required />
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <select name="category">
+            <option value="fresh">Fresh</option>
+            <option value="processed">Processed</option>
+            <option value="frozen">Frozen</option>
+            <option value="packaging">Packaging</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Unit</label>
+          <select name="unit">
+            <option value="kg">kg</option>
+            <option value="pcs">pieces</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Quantity</label>
+          <input type="number" step="0.001" name="quantity" value="0" />
+        </div>
+        <div class="field">
+          <label>Initial Stock (extra)</label>
+          <input type="number" step="0.001" name="initial_stock" value="0" />
+        </div>
+        <div class="field">
+          <label>Stock Location</label>
+          <select name="initial_stock_location_id" required>
+            {% for loc in locations %}
+            <option value="{{ loc.id }}">{{ loc.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label>HSN/SAC (Optional)</label>
+          <input type="text" name="hsn_sac" placeholder="e.g., 20059900" class="small-input" />
+        </div>
+        <div class="field">
+          <label>Unit Price</label>
+          <input type="number" step="0.01" name="unit_price" value="0" />
+        </div>
+        <div class="field">
+          <label>GST Rate (%)</label>
+          <input type="number" step="0.01" name="tax_rate" value="0" class="small-input" />
+        </div>
+      </div>
+      <div class="actions-row">
+        <button type="submit" class="button">Save</button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <h3>Item List</h3>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Quantity (unit)</th>
+            <!-- <th>Initial Qty</th> -->
+            {% for loc in locations %}
+            <th>Stock {{ loc.name }}</th>
+            {% endfor %}
+            <th>Price</th>
+            <th>Tax %</th>
+            {% if current_user.is_admin() %}<th class="right">Actions</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.category|capitalize }}</td>
+            <td>{{ item.quantity }} {{ item.unit }}</td>
+            <!-- <td>{{ item.quantity }}</td> -->
+            {% for loc in locations %}
+            <td>{{ item_stocks_by_location[item.id][loc.id] | default(0) }}</td>
+            {% endfor %}
+            <td>{{ item.unit_price|currency }}</td>
+            <td>{{ item.tax_rate }}%</td>
+            {% if current_user.is_admin() %}
+            <td class="right">
+              <div class="table-actions">
+                <a class="button small secondary" href="{{ url_for('item_edit', item_id=item.id) }}">Edit</a>
+                <form method="post" action="{{ url_for('item_delete', item_id=item.id) }}" style="display:inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <button class="button small danger" onclick="return confirm('Delete this item?')">Delete</button>
+                </form>
+              </div>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

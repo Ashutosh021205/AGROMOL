@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Orders</h2>
+
+<div class="grid two">
+  <div class="card">
+    <h3>Quick Create Order</h3>
+    <form method="get" action="{{ url_for('order_new') }}">
+      <p class="small">Create a detailed order on the next page, or start here:</p>
+      <div class="grid two">
+        <label>Customer Name
+          <input type="text" name="prefill_customer" placeholder="e.g., Supermart" />
+        </label>
+        <label>Company
+          <input type="text" name="prefill_company" placeholder="Optional" />
+        </label>
+      </div>
+      <div class="grid two">
+        <label>Location
+          <input type="text" name="prefill_location" placeholder="Optional" />
+        </label>
+        <label>&nbsp;
+          <button type="submit">Create Order</button>
+        </label>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>Status</h3>
+    <ul>
+      <li>Pending: <strong>{{ counts.get('PENDING', 0) }}</strong></li>
+      <li>Delivered: <strong>{{ counts.get('DELIVERED', 0) }}</strong></li>
+      <li>Cancelled: <strong>{{ counts.get('CANCELLED', 0) }}</strong></li>
+    </ul>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-head">
+    <div class="search">
+      <input type="text" id="orderSearch" placeholder="Search customer or #id" />
+    </div>
+  </div>
+  <div class="table-scroll">
+    <table id="ordersTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Customer</th>
+          <th>Company</th>
+          <th>Created</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orders %}
+        <tr>
+          <td data-index="#{{ o.id }}">#{{ o.id }}</td>
+          <td>{{ o.customer_name }}</td>
+          <td>{{ o.company_name or '—' }}</td>
+          <td>{% if o.created_at %}{{ o.created_at.strftime('%Y-%m-%d %H:%M') }}{% else %}—{% endif %}</td>
+          <td><span class="badge {{ o.status|lower }}">{{ o.status }}</span></td>
+          <td>
+            <a class="button small" href="{{ url_for('order_detail', order_id=o.id) }}">View</a>
+            {% if o.status == 'DELIVERED' %}
+              <a class="button small ghost" href="{{ url_for('invoice', order_id=o.id) }}">Invoice</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+(function(){
+  const search = document.getElementById('orderSearch');
+  const rows = Array.from(document.querySelectorAll('#ordersTable tbody tr'));
+  function apply(){
+    const q = (search.value || '').toLowerCase();
+    rows.forEach(r => {
+      const txt = r.innerText.toLowerCase();
+      r.style.display = txt.includes(q) ? '' : 'none';
+    });
+  }
+  if (search) search.addEventListener('input', apply);
+})();
+</script>
+{% endblock %}

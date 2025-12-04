@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>New Order</h2>
+<form method="post" id="orderForm">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+  <div class="card">
+    <div class="form-grid">
+      <div class="field third">
+        <label>Customer Name</label>
+        <input type="text" name="customer_name" value="{{ request.args.get('prefill_customer','') }}" required />
+      </div>
+      <div class="field two-thirds">
+        <label>Company Name</label>
+        <input type="text" name="company_name" value="{{ request.args.get('prefill_company','') }}" placeholder="Optional" />
+      </div>
+      <div class="field third">
+        <label>Company Location</label>
+        <input type="text" name="company_location" value="{{ request.args.get('prefill_location','') }}" placeholder="Optional" />
+      </div>
+      <div class="field two-thirds">
+        <label>Customer GSTIN</label>
+        <input type="text" name="customer_gstin" placeholder="e.g., 22AAAAA0000A1Z5" />
+      </div>
+      <div class="field">
+        <label>Customer Address</label>
+        <textarea name="customer_address" rows="2"></textarea>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="field half">
+        <label>Dispatch Location</label>
+        <select name="dispatch_location_id">
+          <option value="">Select a location (Optional)</option>
+          {% for loc in locations %}
+          <option value="{{ loc.id }}">{{ loc.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Items</h3>
+    <p class="small">Enter either total weight (Qty) or number of packets with weight per packet (kg). If both are filled, weight/packet will auto-calc.</p>
+    <table id="lines">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>HSN/SAC</th>
+          <th>Total Qty</th>
+          <th>Packets</th>
+          <th>Wt/Packet</th>
+          <th>Location</th>
+          <th>Unit Price</th>
+          <th>GST Rate</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <input type="text" name="item_name[]" list="items_list" placeholder="Type item name" />
+            <input type="hidden" name="item_id[]" />
+            <datalist id="items_list">
+              {% for i in items %}
+              <option value="{{ i.name }}"></option>
+              {% endfor %}
+            </datalist>
+          </td>
+          <td><input type="text" name="hsn_sac[]" placeholder="HSN/SAC" class="small-input" /></td>
+          <td>
+            <input type="number" name="qty[]" step="0.001" value="0" />
+            <div class="stock-hint" style="font-size:12px;color:#666"></div>
+          </td>
+          <td><input type="number" name="packets_count[]" step="1" value="0" /></td>
+          <td><input type="number" name="packet_weight[]" step="0.001" value="0.500" /></td>
+          <td>
+            <select name="location_id[]">
+              {% for loc in locations %}
+              <option value="{{ loc.id }}">{{ loc.name }}</option>
+              {% endfor %}
+            </select>
+          </td>
+          <td><input type="number" name="unit_price[]" step="0.01" /></td>
+          <td><input type="number" name="tax_rate[]" step="0.01" class="small-input" /></td>
+          <td><button type="button" class="remove">✕</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap">
+      <button type="button" id="addLine">Add Line</button>
+      <a class="button ghost" href="{{ url_for('orders_list') }}" target="_blank">View Orders</a>
+    </div>
+  </div>
+  <div class="actions-row">
+    <button type="submit">Create Order</button>
+    <a class="button ghost" href="{{ url_for('orders_list') }}">Cancel</a>
+  </div>
+</form>
+
+<script>
+(function(){
+  const form = document.getElementById('orderForm');
+  const table = document.getElementById('lines').getElementsByTagName('tbody')[0];
+  const addBtn = document.getElementById('addLine');
+  const META = {
+  {% for i in items %}
+    "{{ i.name|e }}": {"id": {{ i.id }}, "price": {{ i.unit_price|float }}, "tax": {{ i.tax_rate|float }}, "hsn_sac": "{{ i.hsn_sac or '' }}" }{% if not loop.last %},{% endif %}
+  {% endfor %}
+  };
+  const LOCATIONS = [
+  {% for loc in locations %}
+    {"id": {{ loc.id }}, "name": "{{ loc.name|e }}" }{% if not loop.last %},{% endif %}
+  {% endfor %}
+  ];
+  // Per-item per-location stocks injected by backend
+  const STOCKS = {
+  {% for it in items %}
+    {{ it.id }}: { {% for loc in locations %} {{ loc.id }}: {{ item_stocks_by_location[it.id][loc.id]|float }}{% if not loop.last %}, {% endif %}{% endfor %} }{% if not loop.last %}, {% endif %}
+  {% endfor %}
+  };
+
+  let dirty = false;
+  let submitted = false;
+  form.addEventListener('input', () => { dirty = true; });
+  window.addEventListener('beforeunload', (e) => {
+    if (dirty && !submitted) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+  form.addEventListener('submit', () => { submitted = true; });
+
+  // Prevent Enter from submitting prematurely
+  form.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const tag = (e.target.tagName || '').toLowerCase();
+      if (tag !== 'textarea' && tag !== 'button') {
+        e.preventDefault();
+      }
+    }
+  });
+
+  function wireNameResolver(tr){
+    const nameInput = tr.querySelector('input[name="item_name[]"]');
+    const hiddenId = tr.querySelector('input[name="item_id[]"]');
+    const price = tr.querySelector('input[name="unit_price[]"]');
+    const tax = tr.querySelector('input[name="tax_rate[]"]');
+    const qty = tr.querySelector('input[name="qty[]"]');
+    const stockHint = tr.querySelector('.stock-hint');
+    const packs = tr.querySelector('input[name="packets_count[]"]');
+    const wpp = tr.querySelector('input[name="packet_weight[]"]');
+    const hsnSacInput = tr.querySelector('input[name="hsn_sac[]"]');
+    const locSelect = tr.querySelector('select[name="location_id[]"]');
+
+    const syncName = () => {
+      const key = (nameInput.value || '').trim();
+      const meta = META[key];
+      if (meta){
+        hiddenId.value = meta.id;
+        if (!price.value) price.value = meta.price;
+        if (!tax.value) tax.value = meta.tax;
+        if (!hsnSacInput.value) hsnSacInput.value = meta.hsn_sac;
+      } else {
+        hiddenId.value = '';
+      }
+      updateStockHint();
+    };
+
+    const autoCalc = () => {
+      const q = parseFloat(qty.value || '0');
+      const p = parseFloat(packs.value || '0');
+      if (q > 0 && p > 0) {
+        const per = q / p; // kg per packet
+        wpp.value = per.toFixed(3);
+      }
+      validateQty();
+    };
+
+    const getAvailable = () => {
+      const idVal = parseInt(hiddenId.value || '0');
+      const locVal = parseInt(locSelect.value || '0');
+      if (!idVal || !locVal) return 0;
+      const byLoc = STOCKS[idVal] || {};
+      return parseFloat(byLoc[locVal] || 0);
+    };
+
+    const updateStockHint = () => {
+      const avail = getAvailable();
+      if (avail > 0) {
+        stockHint.textContent = `Available: ${avail.toFixed(3)}`;
+      } else {
+        stockHint.textContent = '';
+      }
+    };
+
+    const validateQty = () => {
+      const requested = parseFloat(qty.value || '0');
+      const avail = getAvailable();
+      qty.classList.remove('low-stock');
+      qty.classList.remove('out-stock');
+      if (requested > 0 && avail <= 0) {
+        alert('Selected item is out of stock for this location.');
+        qty.classList.add('out-stock');
+      } else if (requested > avail) {
+        alert('Requested quantity exceeds available stock.');
+        qty.classList.add('low-stock');
+      } else if (avail > 0 && avail <= 5) { // low threshold
+        qty.classList.add('low-stock');
+      }
+    };
+
+    nameInput.addEventListener('input', syncName);
+    nameInput.addEventListener('change', syncName);
+    nameInput.addEventListener('blur', syncName);
+    qty.addEventListener('input', autoCalc);
+    packs.addEventListener('input', autoCalc);
+    locSelect.addEventListener('change', () => { updateStockHint(); validateQty(); });
+    // initialize
+    updateStockHint();
+  }
+
+  function enhanceRow(tr){
+    wireNameResolver(tr);
+    tr.querySelector('.remove').addEventListener('click', () => {
+      if (table.rows.length > 1) tr.remove();
+    });
+  }
+
+  addBtn.addEventListener('click', () => {
+    const tr = table.rows[0].cloneNode(true);
+    tr.querySelector('input[name="item_name[]"]').value = '';
+    tr.querySelector('input[name="item_id[]"]').value = '';
+    tr.querySelector('input[name="hsn_sac[]"]').value = '';
+    tr.querySelector('input[name="qty[]"]').value = '0';
+    tr.querySelector('input[name="packets_count[]"]').value = '0';
+    tr.querySelector('input[name="packet_weight[]"]').value = '0.500';
+    tr.querySelector('input[name="unit_price[]"]').value = '';
+    tr.querySelector('input[name="tax_rate[]"]').value = '';
+    tr.querySelector('select[name="location_id[]"]').value = LOCATIONS[0].id;
+    table.appendChild(tr);
+    enhanceRow(tr);
+  });
+
+  Array.from(table.rows).forEach(enhanceRow);
+})();
+</script>
+{% endblock %}

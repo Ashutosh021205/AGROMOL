@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Record Delivery for Order #{{ order.id }}</h2>
+<form method="post" id="deliveryForm">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+  <div class="card">
+    <div class="form-grid">
+      <div class="field half">
+        <label>Customer</label>
+        <input type="text" value="{{ order.customer_name }}" readonly />
+      </div>
+      <div class="field half">
+        <label>Order Status</label>
+        <input type="text" value="{{ order.status }}" readonly />
+      </div>
+      <div class="field">
+        <label>Overall mismatch reason (optional)</label>
+        <input type="text" name="overall_reason" placeholder="If many lines differ from order, write the overall reason here" />
+      </div>
+    </div>
+  </div>
+
+  <table id="deliveryLines">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Ordered</th>
+        <th>Delivered</th>
+        <th>Accepted</th>
+        <th>Rejected</th>
+        <th>Mismatch Reason</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for li in order.items %}
+      <tr>
+        <td>{{ li.item_name }}</td>
+        <td class="ordered">{{ li.qty_ordered }}</td>
+        <td><input type="number" name="qty_delivered" step="0.001" value="{{ li.qty_ordered }}" /></td>
+        <td><input type="number" name="qty_accepted" step="0.001" value="{{ li.qty_ordered }}" /></td>
+        <td><input type="number" name="qty_rejected" step="0.001" value="0" /></td>
+        <td><input type="text" name="reason" placeholder="Required if mismatch" /></td>
+        <input type="hidden" name="order_item_id" value="{{ li.id }}" />
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <button type="submit">Save Delivery</button>
+</form>
+
+<script>
+(function(){
+  const tbody = document.getElementById('deliveryLines').getElementsByTagName('tbody')[0];
+
+  function syncRow(tr){
+    const delivered = tr.querySelector('input[name="qty_delivered"]');
+    const accepted = tr.querySelector('input[name="qty_accepted"]');
+    const rejected = tr.querySelector('input[name="qty_rejected"]');
+
+    function recalc(){
+      const d = parseFloat(delivered.value || '0');
+      const a = parseFloat(accepted.value || '0');
+      const r = parseFloat(rejected.value || '0');
+      const sum = a + r;
+      if (!isNaN(d) && !isNaN(sum) && Math.abs(sum - d) > 1e-9) {
+        const newR = Math.max(0, d - a);
+        rejected.value = newR.toFixed(3);
+      }
+    }
+
+    delivered.addEventListener('input', recalc);
+    accepted.addEventListener('input', recalc);
+    rejected.addEventListener('input', recalc);
+  }
+
+  Array.from(tbody.rows).forEach(syncRow);
+})();
+</script>
+{% endblock %}
+
+

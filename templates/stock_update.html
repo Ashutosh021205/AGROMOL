@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Stock Update</h2>
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+  <div class="card">
+    <label>Date
+      <input type="date" name="entry_date" value="{{ today }}" />
+    </label>
+    <label>Location
+      <select name="location_id">
+        {% for loc in locations %}
+        <option value="{{ loc.id }}">{{ loc.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Unit</th>
+          {% for loc in locations %}
+          <th>Stock {{ loc.name }}</th>
+          {% endfor %}
+          <th>Stock Change (+/-)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td>{{ item.name }}</td>
+          <td>{{ item.unit }}</td>
+          {% for loc in locations %}
+          <td>{{ item_stocks_by_location[item.id][loc.id] | default(0) }}</td>
+          {% endfor %}
+          <td>
+            <input type="number" name="delta_{{ item.id }}" step="0.001" value="0" />
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <button type="submit">Apply Updates</button>
+</form>
+{% endblock %}
+

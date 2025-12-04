@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Dashboard</h2>
+<div class="grid">
+  <div class="card">
+    <h3>Orders</h3>
+    <ul id="statusCounts">
+      <li>Pending: <strong data-key="PENDING">{{ counts.get('PENDING', 0) }}</strong></li>
+      <li>Delivered: <strong data-key="DELIVERED">{{ counts.get('DELIVERED', 0) }}</strong></li>
+      <li>Cancelled: <strong data-key="CANCELLED">{{ counts.get('CANCELLED', 0) }}</strong></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Today's Delivery ({{ today }})</h3>
+    <ul id="todayTotals">
+      <li>Accepted Qty: <strong data-key="accepted">{{ today_accepted }}</strong></li>
+      <li>Rejected Qty: <strong data-key="rejected">{{ today_rejected }}</strong></li>
+    </ul>
+    <h4 style="margin-top:10px">By item</h4>
+    <div class="table-scroll">
+      <table id="todayPerItem">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Accepted</th>
+            <th>Rejected</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for name, a, r in today_item_totals %}
+          <tr>
+            <td>{{ name }}</td>
+            <td>{{ a }}</td>
+            <td>{{ r }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" action="{{ url_for('dashboard') }}" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+    <label>Category
+      <select name="category">
+        <option value="all" {% if selected_category=='all' %}selected{% endif %}>All</option>
+        <option value="fresh" {% if selected_category=='fresh' %}selected{% endif %}>Fresh</option>
+        <option value="processed" {% if selected_category=='processed' %}selected{% endif %}>Processed</option>
+        <option value="frozen" {% if selected_category=='frozen' %}selected{% endif %}>Frozen</option>
+      </select>
+    </label>
+    <button type="submit">Filter</button>
+  </form>
+</div>
+
+<div class="card">
+  <h3>Download Reports</h3>
+  <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+    <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; background-color: #f9f9f9;">
+      <h4 style="margin: 0 0 10px 0; color: #333;">Stock Reports</h4>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <a href="{{ url_for('report_stock_csv') }}" class="button" style="background-color: #28a745; color: white; text-decoration: none; padding: 8px 12px; border-radius: 4px; font-size: 14px;">CSV</a>
+        <a href="{{ url_for('report_stock', day='today') }}" class="button" style="background-color: #dc3545; color: white; text-decoration: none; padding: 8px 12px; border-radius: 4px; font-size: 14px;">PDF</a>
+      </div>
+    </div>
+    <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; background-color: #f9f9f9;">
+      <h4 style="margin: 0 0 10px 0; color: #333;">Order Reports</h4>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <a href="{{ url_for('report_orders_csv') }}" class="button" style="background-color: #28a745; color: white; text-decoration: none; padding: 8px 12px; border-radius: 4px; font-size: 14px;">CSV</a>
+        <a href="{{ url_for('report_orders', day='today') }}" class="button" style="background-color: #dc3545; color: white; text-decoration: none; padding: 8px 12px; border-radius: 4px; font-size: 14px;">PDF</a>
+      </div>
+    </div>
+  </div>
+  <p style="font-size: 12px; color: #666; margin-top: 15px;"><strong>Tip:</strong> All reports include the current date for tracking purposes. PDF reports are optimized for printing.</p>
+</div>
+
+<h3>Current Stock</h3>
+<div class="table-scroll">
+  <table id="currentStockTable">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Category</th>
+        <th>Unit</th>
+        {% for loc in locations %}
+        <th>Stock {{ loc.name }}</th>
+        {% endfor %}
+        <!-- <th>Price</th> -->
+        <!-- <th>Tax %</th> -->
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr data-item-id="{{ item.id }}">
+        <td>{{ item.name }}</td>
+        <td>{{ item.category|capitalize }}</td>
+        <td>{{ item.unit }}</td>
+        {% for loc in locations %}
+        <td data-location-id="{{ loc.id }}">{{ item_stocks_by_location[item.id][loc.id] }}</td>
+        {% endfor %}
+        <!-- <td>{{ item.unit_price|currency }}</td> -->
+        <!-- <td>{{ item.tax_rate }}%</td> -->
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+{% raw %}
+(function(){
+  async function refresh(){
+    try {
+      const res = await fetch('{{ url_for('api_dashboard') }}');
+      if (!res.ok) return;
+      const data = await res.json();
+      const map = data.counts || {};
+      document.querySelectorAll('#statusCounts [data-key]').forEach(el => {
+        const k = el.getAttribute('data-key');
+        el.textContent = map[k] ?? 0;
+      });
+      const today = data.today || {};
+      document.querySelector('#todayTotals [data-key="accepted"]').textContent = today.accepted ?? 0;
+      document.querySelector('#todayTotals [data-key="rejected"]').textContent = today.rejected ?? 0;
+      const per = data.today_per_item || [];
+      const tbody = document.querySelector('#todayPerItem tbody');
+      if (tbody){
+        tbody.innerHTML='';
+        per.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${row.name}</td><td>${row.accepted}</td><td>${row.rejected}</td>`;
+          tbody.appendChild(tr);
+        });
+      }
+      // Update stock by location headers
+      const stockTableHead = document.querySelector('#currentStockTable thead tr');
+      const existingLocationHeaders = stockTableHead.querySelectorAll('[data-location-header]');
+      existingLocationHeaders.forEach(header => header.remove());
+
+      // Remove any existing Price and Tax headers before re-adding
+      stockTableHead.querySelectorAll('[data-price-header], [data-tax-header]').forEach(header => header.remove());
+
+      const locations = data.locations || [];
+      // const priceHeader = stockTableHead.querySelector('th:nth-last-child(2)'); // Price header
+      locations.forEach(loc => {
+        const th = document.createElement('th');
+        th.textContent = `Stock ${loc.name}`;
+        th.dataset.locationHeader = loc.id; // Add a data attribute to identify these headers
+        stockTableHead.appendChild(th); // Append to the end, then we'll reorder if needed
+      });
+
+      // Add Price and Tax % headers after all location specific headers
+      const priceTh = document.createElement('th');
+      priceTh.textContent = 'Price';
+      priceTh.dataset.priceHeader = true;
+      stockTableHead.appendChild(priceTh);
+      const taxTh = document.createElement('th');
+      taxTh.textContent = 'Tax %';
+      taxTh.dataset.taxHeader = true;
+      stockTableHead.appendChild(taxTh);
+      
+      // Update stock by location
+      const itemStocksByLocation = data.item_stocks_by_location || {};
+      const itemPrices = data.item_prices || {};
+      const itemTaxRates = data.item_tax_rates || {};
+      document.querySelectorAll('#currentStockTable tbody tr').forEach(row => {
+        const itemId = row.dataset.itemId;
+        if (itemId) {
+          // Remove old location stock cells
+          row.querySelectorAll('[data-location-id]').forEach(cell => cell.remove());
+          // Remove old price and tax cells
+          row.querySelectorAll('[data-price-cell], [data-tax-cell]').forEach(cell => cell.remove());
+          
+          // const itemPriceCell = row.querySelector('td:nth-last-child(2)'); // Price cell
+          locations.forEach(loc => {
+            const td = document.createElement('td');
+            td.dataset.locationId = loc.id;
+            td.textContent = itemStocksByLocation[itemId] && itemStocksByLocation[itemId][loc.id] ? itemStocksByLocation[itemId][loc.id] : 0;
+            // row.insertBefore(td, itemPriceCell);
+            row.appendChild(td);
+          });
+          // Add Price and Tax % cells
+          const priceTd = document.createElement('td');
+          priceTd.dataset.priceCell = true;
+          priceTd.textContent = `₹${(itemPrices[itemId] ?? 0).toFixed(2)}`;
+          row.appendChild(priceTd);
+          const taxTd = document.createElement('td');
+          taxTd.dataset.taxCell = true;
+          taxTd.textContent = `${(itemTaxRates[itemId] ?? 0).toFixed(2)}%`;
+          row.appendChild(taxTd);
+        }
+      });
+    } catch(e) {
+      console.error("Error refreshing dashboard data:", e);
+    }
+    // Update packaging materials
+    const packagingMaterials = data.packaging_materials || [];
+    const packagingTbody = document.querySelector('#packagingStockTable tbody');
+    if (packagingTbody) {
+      packagingTbody.innerHTML = ''; // Clear existing rows
+      packagingMaterials.forEach(material => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${material.name}</td><td>${material.unit}</td><td>${material.current_stock}</td>`;
+        packagingTbody.appendChild(tr);
+      });
+    }
+  }
+  // Initial refresh
+  refresh();
+  setInterval(refresh, 5000);
+})();
+{% endraw %}
+</script>
+{% endblock %}

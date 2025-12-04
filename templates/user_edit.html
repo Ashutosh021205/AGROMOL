@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Edit User</h2>
+
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+  
+  <div class="card">
+    <div class="form-grid">
+      <div class="field">
+        <label>Username</label>
+        <input type="text" name="username" value="{{ user.username }}" required />
+      </div>
+      
+      <div class="field">
+        <label>Email</label>
+        <input type="email" name="email" value="{{ user.email }}" required />
+      </div>
+      
+      <div class="field">
+        <label>Password</label>
+        <input type="password" name="password" placeholder="Leave blank to keep current password" />
+        <p class="small">Leave blank to keep the current password</p>
+      </div>
+      
+      <div class="field">
+        <label>Role</label>
+        <select name="role" required>
+          <option value="viewer" {% if user.role == 'viewer' %}selected{% endif %}>Viewer (Read-only access)</option>
+          <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin (Full access)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  
+  <div class="actions-row">
+    <button type="submit">Update User</button>
+    <a class="button ghost" href="{{ url_for('users_list') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}
+
+
+
+
+
+
+

@@ -1,0 +1,161 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+:root{
+  --bg:#ffffff; --text:#0b1b14; --muted:#4a5b52; --panel:#ffffff; --border:#e8efe9;
+  --brand:#2ea44f; --brand-2:#248a3d; --brand-ghost:#e8f7ee;
+  --accent:#2b6cb0; --accent-2:#2c5282; --earth:#8a5a2b;
+  --badge:#eefdf3; --badge-text:#22543d;
+  --danger:#e53e3e; --warn:#d69e2e; --ok:#38a169;
+}
+[data-theme="dark"]{
+  --bg:#0b1114; --text:#e8f1ec; --muted:#9db0a7; --panel:#0e1518; --border:#1d2a28;
+  --brand:#3bc863; --brand-2:#2ea44f; --brand-ghost:#0d2516;
+  --accent:#63a0e8; --accent-2:#4a86c8; --earth:#b0845a;
+  --badge:#0e1a13; --badge-text:#b7d3c3;
+  --danger:#f87171; --warn:#f6c453; --ok:#4ade80;
+}
+*{ box-sizing:border-box }
+html,body{ height:100% }
+/* Agriculture background with leaf pattern overlay */
+body{
+  margin:0; color:var(--text); font-family:'Poppins', System-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background:
+    url('pattern-leaves.svg') repeat, /* lightweight svg pattern */
+    radial-gradient(900px 420px at -10% -10%, color-mix(in oklab, var(--brand) 10%, transparent) 0%, transparent 60%),
+    radial-gradient(700px 380px at 110% -10%, color-mix(in oklab, var(--accent) 10%, transparent) 0%, transparent 60%),
+    linear-gradient(180deg, color-mix(in oklab, var(--bg) 92%, var(--brand-ghost)) 0%, var(--bg) 60%);
+  background-attachment: fixed, fixed, fixed, fixed;
+}
+
+/* Links & Buttons */
+a{ color:var(--accent); text-decoration:none }
+a:hover{ text-decoration:underline }
+a:focus-visible{ outline:3px solid color-mix(in oklab, var(--accent) 50%, transparent); outline-offset:2px }
+.brand img{ height:40px; width:auto; display:block }
+button,a.button{ background:linear-gradient(135deg, var(--brand) 0%, var(--accent) 100%); color:#fff; border:none; padding:10px 18px; border-radius:999px; cursor:pointer; transition:transform .12s ease, box-shadow .12s ease, opacity .15s ease; box-shadow:0 6px 14px rgba(46,164,79,.18) }
+button:hover,a.button:hover{ transform:translateY(-1px); box-shadow:0 8px 18px rgba(46,164,79,.25) }
+button:active,a.button:active{ transform:translateY(0) }
+button:focus-visible,a.button:focus-visible{ outline:3px solid color-mix(in oklab, var(--accent) 50%, transparent); outline-offset:2px }
+button.linklike{ background:none; border:none; color:var(--accent); padding:0 8px; cursor:pointer }
+button.linklike:hover{ text-decoration:underline }
+.button.small{ padding:6px 10px; border-radius:999px; font-size:13px }
+.button.ghost{ background:transparent; color:var(--brand); border:2px solid var(--brand) }
+.logout-btn{ background:linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color:#fff; border:none; padding:8px 14px; border-radius:999px; cursor:pointer; margin-left:12px; box-shadow:0 6px 14px rgba(239,68,68,.18); transition:transform .12s ease, box-shadow .12s ease }
+.logout-btn:hover{ transform:translateY(-1px); box-shadow:0 8px 18px rgba(239,68,68,.28) }
+.logout-btn:active{ transform:none }
+
+/* Layout */
+.container{ max-width:1200px; margin:0 auto; padding:16px }
+header{ background:color-mix(in oklab, var(--panel) 85%, transparent); backdrop-filter: saturate(120%) blur(6px); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:10 }
+.nav{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap }
+.nav a, .nav button{ margin-left:12px }
+main .card{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:18px; margin:14px 0; box-shadow: 0 1px 0 rgba(0,0,0,.03) }
+.grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:12px }
+.grid.two{ grid-template-columns: repeat(2, minmax(260px, 1fr)) }
+@media (max-width: 720px){
+  .nav a, .nav button{ margin-left:0 }
+}
+
+/* Forms */
+label{ display:block; margin:10px 0 6px; font-weight:600; color:var(--muted) }
+input[type=text],input[type=number],input[type=date],input[type=password],textarea,select{
+  width:100%; padding:12px 14px; background:transparent; color:var(--text); border:1px solid var(--border); border-radius:12px; outline: none; transition:border-color .15s ease, box-shadow .15s ease
+}
+input:focus,textarea:focus,select:focus{ border-color:var(--brand); box-shadow:0 0 0 3px color-mix(in oklab, var(--brand) 20%, transparent) }
+select{
+  background-color: color-mix(in oklab, var(--panel) 92%, transparent);
+  color: var(--text);
+}
+[data-theme="dark"] select{
+  background-color: #10151b;
+  color: #e6edf3;
+  border-color: #2a3644;
+}
+select:focus{
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 22%, transparent);
+}
+option{ color: initial }
+textarea{ min-height:84px; resize:vertical }
+
+/* Form grid helpers */
+.form-grid{ display:grid; grid-template-columns: repeat(12, 1fr); gap:12px }
+.field{ grid-column: span 12 }
+.field.half{ grid-column: span 6 }
+.field.third{ grid-column: span 4 }
+.field.two-thirds{ grid-column: span 8 }
+@media (max-width: 720px){ .field.half,.field.third,.field.two-thirds{ grid-column: span 12 } }
+
+/* Flash & stats */
+.small{ color:var(--muted); font-size:12px }
+.flashes{ list-style:none; padding:0 }
+.flash{ padding:10px; margin:8px 0; border-radius:12px; border:1px solid var(--border) }
+.flash.success{ background:color-mix(in oklab, var(--ok) 12%, transparent) }
+.flash.error{ background:color-mix(in oklab, var(--danger) 12%, transparent) }
+.flash.info{ background:color-mix(in oklab, var(--accent) 12%, transparent) }
+
+/* Tables */
+.table-head{ display:flex; align-items:center; justify-content:space-between; margin:6px 0 }
+table{ width:100%; border-collapse:separate; border-spacing:0; background:var(--panel); border:1px solid var(--border); border-radius:14px; overflow:hidden }
+th,td{ border-bottom:1px solid var(--border); padding:12px 14px; text-align:left }
+tr:last-child td{ border-bottom:none }
+th.right,td.right{ text-align:right }
+.table-scroll{ overflow:auto; max-height:60vh; width:100%; }
+.scroll-y{ overflow-y:auto; max-height:60vh; }
+.scroll-x{ overflow-x:auto; width:100%; }
+.table-scroll table { min-width: 800px; }
+
+/* Badges */
+.badge{ padding:4px 10px; border-radius:999px; font-size:12px; background:var(--badge); color:var(--badge-text); border:1px solid var(--border) }
+.badge.delivered{ background:color-mix(in oklab, var(--ok) 15%, transparent); color:var(--ok) }
+.badge.pending{ background:color-mix(in oklab, var(--warn) 15%, transparent); color:var(--warn) }
+.badge.cancelled{ background:color-mix(in oklab, var(--danger) 15%, transparent); color:var(--danger) }
+
+/* Search */
+.search input{ max-width:360px }
+
+/* Login card tweak */
+.login-wrap{ max-width:420px; margin:24px auto }
+.actions-row{ display:flex; gap:10px; justify-content:flex-end; margin-top:10px; flex-wrap:wrap }
+.table-actions{ display:inline-flex; gap:8px; align-items:center; flex-wrap:wrap }
+.button.secondary{ background:linear-gradient(135deg, var(--accent) 0%, var(--brand) 100%) }
+.button.danger{ background:linear-gradient(135deg, #ef4444 0%, #b91c1c 100%) }
+.button.danger:hover{ box-shadow:0 8px 18px rgba(239,68,68,.28) }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.input-group {
+  display: flex;
+  gap: 5px;
+}
+
+.input-group input {
+  flex: 1;
+}
+
+/* Small input for HSN/SAC */
+.small-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  border-radius: 8px;
+  box-sizing: border-box;
+  font-size: 0.9em;
+  margin-top: 5px; /* Add some space between item name and HSN/SAC */
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Stock highlights */
+.low-stock{ border-color:#e53935 !important; background:#ffebee }
+.out-stock{ border-color:#b71c1c !important; background:#ffdde0 }

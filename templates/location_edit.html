@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Edit Location</h2>
+
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+  
+  <div class="card">
+    <div class="form-grid">
+      <div class="field">
+        <label>Location Name</label>
+        <input type="text" name="name" value="{{ location.name }}" required />
+      </div>
+    </div>
+  </div>
+  
+  <div class="actions-row">
+    <button type="submit">Update Location</button>
+    <a class="button ghost" href="{{ url_for('manage_locations') }}">Cancel</a>
+  </div>
+</form>
+
+<div style="margin-top: 20px; padding: 10px; background: #fff3cd; border-radius: 8px;">
+  <p class="small"><strong>Note:</strong> Changing the location name will update all references to this location throughout the system.</p>
+</div>
+{% endblock %}
+
+
+
+
+
+
+
