@@ -1752,7 +1752,21 @@ def report_stock(day: str):
     for item in items:
         if y < 20*mm:
             c.showPage(); _pdf_header(c, f"Stock Levels - {target}"); y = 272*mm; y = _pdf_table_header(c, y, cols)
-        total_stock = item.current_stock
+
+        # Historical stock as of end of target date = sum of all StockEntry
+        # quantities up to and including that date, across all locations.
+        total_stock_val = db.session.query(func.coalesce(func.sum(StockEntry.change_qty), 0)) \
+            .filter(
+                StockEntry.item_id == item.id,
+                StockEntry.entry_date <= target,
+            ).scalar() or Decimal("0.000")
+        try:
+            total_stock = Decimal(total_stock_val).quantize(Decimal("0.001"))
+        except Exception:
+            total_stock = Decimal("0.000")
+        if total_stock < Decimal("0.000"):
+            total_stock = Decimal("0.000")
+
         y = _pdf_table_row(
             c,
             y,
