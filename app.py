@@ -1144,15 +1144,34 @@ def order_new():
         flash("Order created", "success")
         return redirect(url_for("order_detail", order_id=order.id))
 
-    # Build per-item, per-location available stock map for client-side validation
+    # Build per-item, per-location AVAILABLE stock map for client-side validation.
+    # This is dynamic and subtracts quantities already reserved on PENDING/PROCESSING/
+    # OUT_FOR_DELIVERY orders so you don't overbook stock across multiple orders.
     item_stocks_by_location: Dict[int, Dict[int, float]] = {}
+    pending_statuses = ["PENDING", "PROCESSING", "OUT_FOR_DELIVERY"]
     for it in items:
         loc_map: Dict[int, float] = {}
         for loc in locations:
+            # Real stock from StockEntry (already independent of price)
+            raw_stock = it.get_stock_by_location(loc.id)
+
+            # Reserved quantity = sum of qty_ordered on non-delivered/non-cancelled orders
+            reserved_q = db.session.query(func.coalesce(func.sum(OrderItem.qty_ordered), 0)) \
+                .join(Order, OrderItem.order_id == Order.id) \
+                .filter(
+                    OrderItem.item_id == it.id,
+                    OrderItem.location_id == loc.id,
+                    Order.status.in_(pending_statuses),
+                ).scalar() or Decimal("0.000")
             try:
-                loc_map[loc.id] = float(it.get_stock_by_location(loc.id))
+                reserved_q = Decimal(reserved_q)
             except Exception:
-                loc_map[loc.id] = 0.0
+                reserved_q = Decimal("0.000")
+
+            available = (raw_stock - reserved_q).quantize(Decimal("0.001"))
+            if available < Decimal("0.000"):
+                available = Decimal("0.000")
+            loc_map[loc.id] = float(available)
         item_stocks_by_location[it.id] = loc_map
 
     return render_template("order_new.html", items=items, locations=locations, item_stocks_by_location=item_stocks_by_location)
@@ -2039,3 +2058,5 @@ def packaging_stock_update():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+
