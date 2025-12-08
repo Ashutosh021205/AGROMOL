@@ -120,11 +120,20 @@ class Item(db.Model):
         return self.get_stock_by_location("all")
 
     def get_stock_by_location(self, location: str) -> Decimal:
+        """Return stock for this item at a given location or across all locations.
+
+        Stock is always computed from StockEntry records and is independent of unit price.
+        We also clamp at zero so it never shows as negative even if deliveries exceed
+        recorded incoming stock.
+        """
         query = db.session.query(func.sum(StockEntry.change_qty)).filter(StockEntry.item_id == self.id)
         if location != "all":
             query = query.filter(StockEntry.location_id == location)
         total_stock = query.scalar() or Decimal("0.000")
-        return total_stock.quantize(Decimal("0.001"))
+        total_stock = total_stock.quantize(Decimal("0.001"))
+        if total_stock < Decimal("0.000"):
+            total_stock = Decimal("0.000")
+        return total_stock
 
 
 class StockEntry(db.Model):
@@ -1708,25 +1717,35 @@ def report_stock(day: str):
         flash("Invalid date format", "error")
         return redirect(url_for("dashboard"))
 
-    entries = (
-        StockEntry.query.join(Item, StockEntry.item_id == Item.id)
-        .filter(StockEntry.entry_date == target)
-        .order_by(Item.name.asc())
-        .all()
-    )
+    # Build a stock snapshot showing remaining stock per product (across all locations),
+    # rather than just the change quantities for the selected day.
+    items = Item.query.order_by(Item.name.asc()).all()
 
     from io import BytesIO
     buf = BytesIO()
     c = canvas.Canvas(buf, pagesize=A4)
-    _pdf_header(c, f"Stock Updates - {target}")
+    _pdf_header(c, f"Stock Levels - {target}")
     y = 272*mm
-    cols = [("Item", 80*mm), ("Change Qty", 35*mm), ("Note", 60*mm)]
+    cols = [("Item", 80*mm), ("Total Stock", 35*mm), ("Unit", 20*mm), ("Category", 40*mm)]
     widths = [w for _, w in cols]
     y = _pdf_table_header(c, y, cols)
-    for e in entries:
+
+    for item in items:
         if y < 20*mm:
-            c.showPage(); _pdf_header(c, f"Stock Updates - {target}"); y = 272*mm; y = _pdf_table_header(c, y, cols)
-        y = _pdf_table_row(c, y, [e.item.name, e.change_qty, e.note or ""], widths)
+            c.showPage(); _pdf_header(c, f"Stock Levels - {target}"); y = 272*mm; y = _pdf_table_header(c, y, cols)
+        total_stock = item.current_stock
+        y = _pdf_table_row(
+            c,
+            y,
+            [
+                item.name,
+                f"{total_stock:.3f}",
+                item.unit,
+                (item.category or "").capitalize(),
+            ],
+            widths,
+        )
+
     c.showPage(); c.save()
     buf.seek(0)
     from flask import send_file
@@ -2020,5 +2039,3 @@ def packaging_stock_update():
 
 if __name__ == "__main__":
     app.run(debug=True)
-
-
